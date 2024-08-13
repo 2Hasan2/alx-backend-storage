@@ -1,0 +1,2 @@
+// re : )
+db.school.find({name: /Holberton.*/});
