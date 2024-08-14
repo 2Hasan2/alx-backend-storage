@@ -6,6 +6,7 @@ import uuid
 from functools import wraps
 from typing import Union, Callable, any
 
+
 def count_calls(method: Callable) -> Callable:
     """Tracks the number of calls made to a method in a Cache class.
     """
@@ -42,8 +43,8 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
-
-
+    @call_history
+    @count_calls
     def store(self, data: Union[str, int, float, bytes]) -> str:
         """Store the input data in Redis and return a key
         """
