@@ -4,34 +4,38 @@
 import redis
 import uuid
 from functools import wraps
-from typing import Union, Callable, any
+from typing import Union, Callable, Any
 
 
 def count_calls(method: Callable) -> Callable:
-    """Tracks the number of calls made to a method in a Cache class.
-    """
+    '''Tracks the number of calls made to a method in a Cache class.
+    '''
     @wraps(method)
-    def wrapper(self, *args, **kwargs) -> any:
-        """Wrapper function
-        """
+    def invoker(self, *args, **kwargs) -> Any:
+        '''Invokes the given method after incrementing its call counter.
+        '''
         if isinstance(self._redis, redis.Redis):
             self._redis.incr(method.__qualname__)
-            return method(self, *args, **kwargs)
-    return wrapper
+        return method(self, *args, **kwargs)
+    return invoker
+
 
 def call_history(method: Callable) -> Callable:
-    """Tracks the history of inputs and outputs for a particular function.
-    """
+    '''Tracks the call details of a method in a Cache class.
+    '''
     @wraps(method)
-    def wrapper(self, *args, **kwargs) -> any:
-        """Wrapper function
-        """
+    def invoker(self, *args, **kwargs) -> Any:
+        '''Returns the method's output after storing its inputs and output.
+        '''
+        in_key = '{}:inputs'.format(method.__qualname__)
+        out_key = '{}:outputs'.format(method.__qualname__)
         if isinstance(self._redis, redis.Redis):
-            self._redis.rpush(method.__qualname__ + ":inputs", str(args))
-            output = method(self, *args, **kwargs)
-            self._redis.rpush(method.__qualname__ + ":outputs", str(output))
-            return output
-    return wrapper
+            self._redis.rpush(in_key, str(args))
+        output = method(self, *args, **kwargs)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(out_key, output)
+        return output
+    return invoker
 
 
 class Cache:
