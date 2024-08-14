@@ -3,7 +3,34 @@
 """
 import redis
 import uuid
-from typing import Union, Callable
+from functools import wraps
+from typing import Union, Callable, any
+
+def count_calls(method: Callable) -> Callable:
+    """Tracks the number of calls made to a method in a Cache class.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs) -> any:
+        """Wrapper function
+        """
+        if isinstance(self._redis, redis.Redis):
+            self._redis.incr(method.__qualname__)
+            return method(self, *args, **kwargs)
+    return wrapper
+
+def call_history(method: Callable) -> Callable:
+    """Tracks the history of inputs and outputs for a particular function.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs) -> any:
+        """Wrapper function
+        """
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(method.__qualname__ + ":inputs", str(args))
+            output = method(self, *args, **kwargs)
+            self._redis.rpush(method.__qualname__ + ":outputs", str(output))
+            return output
+    return wrapper
 
 
 class Cache:
@@ -14,6 +41,8 @@ class Cache:
         """
         self._redis = redis.Redis()
         self._redis.flushdb()
+
+
 
     def store(self, data: Union[str, int, float, bytes]) -> str:
         """Store the input data in Redis and return a key
